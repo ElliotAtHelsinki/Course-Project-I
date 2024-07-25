@@ -73,11 +73,11 @@ Replace `<username>` with the username you previously copied.
 
 \- Here, lots of personal information about that user is returned to us, even though we are not logged in! The `password` field shouldn't have been returned at all, while the `email` field should only be returned if we are logged in as that user.
 
-2\. Identifying the flaw:
+2\. Identifying the flaw:  
 This issue is happening because we are using the [TypeGraphQL](https://prisma.typegraphql.com/) library to directly generate the `server schema` using the [`Prisma schema`](https://github.com/ElliotAtHelsinki/wreckit-backend/blob/main/prisma/schema.prisma). The `server schema` determines which fields are returned by our GraphQL API server, while the `Prisma schema` reflects the structure of our database. In other words, we are returning whichever fields are present in the backend's database to any client, which is a very bad security practice.
 
 3\. Fixing the flaw:  
-\- Open `schema.prisma` and add a few `/// @TypeGraphQL.omit(output: true)` lines to the `User` model:
+\- Open [`schema.prisma`]((https://github.com/ElliotAtHelsinki/wreckit-backend/blob/main/prisma/schema.prisma)) and add a few `/// @TypeGraphQL.omit(output: true)` lines to the `User` model:
 
 ```prisma
 model User {
