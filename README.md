@@ -74,7 +74,7 @@ Replace `<username>` with the username you previously copied.
 \- Here, lots of personal information about that user is returned to us, even though we are not logged in! The `password` field shouldn't have been returned at all, while the `email` field should only be returned if we are logged in as that user.
 
 2\. Identifying the flaw:  
-This issue is happening because we are using the [TypeGraphQL](https://prisma.typegraphql.com/) library to directly generate the `server schema` using the [`Prisma schema`](https://github.com/ElliotAtHelsinki/wreckit-backend/blob/main/prisma/schema.prisma). The `server schema` determines which fields are returned by our GraphQL API server, while the `Prisma schema` reflects the structure of our database. In other words, we are returning whichever fields are present in the backend's database to any client, which is a very bad security practice.
+This issue is happening because we are using the [TypeGraphQL](https://prisma.typegraphql.com/) library to directly generate the `server schema` using the [`Prisma schema`](https://github.com/ElliotAtHelsinki/wreckit-backend/blob/main/prisma/schema.prisma). The `server schema` determines which fields are returned by our GraphQL API server, while the `Prisma schema` reflects the structure of our database. In other words, we are returning whichever fields are present in the backend's database to any client, which is a very bad security practice. The problematic code is at: https://github.com/ElliotAtHelsinki/wreckit-backend/blob/main/prisma/schema.prisma#L32-L40  
 
 3\. Fixing the flaw:  
 \- Open [`schema.prisma`]((https://github.com/ElliotAtHelsinki/wreckit-backend/blob/main/prisma/schema.prisma)) and add a few `/// @TypeGraphQL.omit(output: true)` lines to the `User` model:
@@ -139,6 +139,8 @@ The issue is with the `getUser` function inside the `UserResolver` class in the 
     return (await prisma.$queryRawUnsafe(`SELECT * FROM "User" WHERE username = '${username}'`)) as User[]
   }
 ```
+
+You can find the code here: https://github.com/ElliotAtHelsinki/wreckit-backend/blob/main/src/resolvers/user.ts#L13-L19  
 
 Notice that the server is constructing a query directly using user input. Therefore, when we pass `<username>' UNION SELECT * FROM "User" UNION SELECT * FROM "User" WHERE username='` as `username`, the following query is constructed:
 
@@ -226,6 +228,8 @@ The cause of the error is the `register` mutation inside the `UserResolver` clas
     return { user }
   }
 ```
+
+You can find the code here: https://github.com/ElliotAtHelsinki/wreckit-backend/blob/main/src/resolvers/user.ts#L22-L74  
 
 In GraphQL, a [Mutation](https://graphql.com/learn/mutations/) is a request, similar to a Query. However, instead of just asking that the server returns some data, it also asks the server to create/modify/delete data in the backend. Here, the `register` mutation takes in `username`, `email`, and `password` as inputs, performs some validation of those inputs, and creates a new user in the database. The line that is causing trouble is the `const user = await prisma.user.create({ data: { username, password } })` line, where we are storing the user's password in plain text to the database.
 
@@ -353,6 +357,8 @@ This is the `updatePost` mutation in the `PostResolver` class in [`post.ts`](htt
   }
 ```
 
+You can find the code here: https://github.com/ElliotAtHelsinki/wreckit-backend/blob/main/src/resolvers/post.ts#L119-L156  
+
 We can see that the mutation doesn't do anything to verify that a request actually comes from the post's author before updating the post in the database.  
 
 3\. Fixing the flaw:  
@@ -441,6 +447,9 @@ The following code inside [`index.ts`](https://github.com/ElliotAtHelsinki/wreck
     })
   )
 ```
+
+You can find the code here: https://github.com/ElliotAtHelsinki/wreckit-backend/blob/main/src/index.ts#L32-L48  
+
 One can see that we're setting `httpOnly` to `false`.
 
 3\. Fixing the flaw:  
